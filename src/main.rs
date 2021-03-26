@@ -74,6 +74,7 @@ fn show_image(image: &Image) {
     }
 }
 
+
 fn decode_ppm_image(cursor: &mut Cursor<Vec<u8>>) -> Result<Image, std::io::Error> {
     let mut image = Image { 
         width: 0,
@@ -81,9 +82,83 @@ fn decode_ppm_image(cursor: &mut Cursor<Vec<u8>>) -> Result<Image, std::io::Erro
         pixels: vec![]
     };
 
+    /* INLEZEN VAN HET TYPE */
+    let mut header: [u8;2]=[0;2]; // inlezen van karakters
+    cursor.read(&mut header)?; // ? geeft error terug mee met result van de functie
+    match &header{ // & dient voor slice van te maken
+        b"P6" => println!("P6 image"),  // b zorgt ervoor dat je byte string hebt (u8 slice)
+        _ => panic!("Not an P6 image")  //_ staat voor default branch
+    }
+
+    /* INLEZEN VAN BREEDTE EN HOOGTE */
+    image.width=read_number(cursor)?;
+    image.height=read_number(cursor)?;
+    let colourRange = read_number(cursor)?;
+
+    /* eventuele whitespaces na eerste lijn */
+    consume_whitespaces(cursor)?;
+
+    /* body inlezen */
+
+    for _ in 0.. image.height{
+        let mut row = Vec::new();
+        for _ in 0..image.width{
+            let red = cursor.read_u8()?;
+            let green = cursor.read_u8()?;
+            let blue = cursor.read_u8()?;
+            
+            row.push(Pixel{r:red,g:green,b:blue});
+        }
+        image.pixels.push(row);
+    }
+
+
+
+
     // TODO: Parse the image here
 
     Ok(image)
+}
+
+fn read_number(cursor: &mut Cursor<Vec<u8>>)-> Result<u32,std::io::Error>{
+    consume_whitespaces(cursor)?;
+
+    let mut buff: [u8;1] = [0];
+    let mut v = Vec::new(); // vector waar je bytes gaat in steken
+
+    loop{
+        cursor.read(& mut buff)?;
+        match buff[0]{
+            b'0'..= b'9' => v.push(buff[0]),
+            b' ' | b'\n' | b'\r' | b'\t' => break,
+            _ => panic!("Not a valid image")
+        }
+    }
+    // byte vector omzetten
+    let num_str: &str = std::str::from_utf8(&v).unwrap(); // unwrap gaat ok value er uit halen als het ok is, panic als het niet ok is
+    let num =num_str.parse::<u32>().unwrap(); // unwrap dient voor errors
+
+    // return
+    Ok(num)
+
+    //return Ok(num); andere mogelijke return
+}
+
+fn consume_whitespaces (cursor: &mut Cursor<Vec<u8>>)-> Result<(),std::io::Error>{ //Result<() : de lege haakjes betekend  niks returnen
+    let mut buff: [u8;1] = [0];
+
+    loop{
+        cursor.read(& mut buff)?;
+        match buff[0]{
+            b' ' | b'\n' | b'\r' | b'\t' => println!("Whitespace"),
+            _ => { // je zit eigenlijk al te ver nu !!! zet cursor 1 terug
+                cursor.seek(SeekFrom::Current(-1))?;
+                break;
+            }
+        }
+    }
+    Ok(()) // () : de lege haakjes betekend  niks returnen
+
 }
 
 fn main() {
