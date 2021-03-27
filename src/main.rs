@@ -93,7 +93,7 @@ fn decode_ppm_image(cursor: &mut Cursor<Vec<u8>>) -> Result<Image, std::io::Erro
     /* INLEZEN VAN BREEDTE EN HOOGTE */
     image.width=read_number(cursor)?;
     image.height=read_number(cursor)?;
-    let colourRange = read_number(cursor)?;
+    //let colourRange = read_number(cursor)?;
 
     /* eventuele whitespaces na eerste lijn */
     consume_whitespaces(cursor)?;
