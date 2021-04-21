@@ -73,6 +73,54 @@ fn show_image(image: &Image) {
         sleep(Duration::new(0, 250000000));
     }
 }
+fn get_char(cursor: &mut Cursor<Vec<u8>>) -> Result<Image, std::io::Error> {
+    let mut image = Image { 
+        width: 0,
+        height: 0,
+        pixels: vec![]
+    };
+
+    /* INLEZEN VAN HET TYPE */
+    let mut header: [u8;2]=[0;2]; // inlezen van karakters
+    cursor.read(&mut header)?; // ? geeft error terug mee met result van de functie
+    match &header{ // & dient voor slice van te maken
+        b"P6" => println!("P6 image"),  // b zorgt ervoor dat je byte string hebt (u8 slice)
+        _ => panic!("Not an P6 image")  //_ staat voor default branch
+    }
+
+    /* INLEZEN VAN BREEDTE EN HOOGTE */
+    image.width=read_number(cursor)?;
+    image.height=read_number(cursor)?;
+    let colourRange = read_number(cursor)?;
+
+    /* eventuele whitespaces na eerste lijn */
+    consume_whitespaces(cursor)?;
+
+    /* body inlezen */
+
+    for _ in 0.. image.height{
+        let mut row = Vec::new();
+        for _ in 0..image.width{
+            let red = cursor.read_u8()?;
+            let green = cursor.read_u8()?;
+            let blue = cursor.read_u8()?;
+
+            //if red < 255 && green < 255{
+                row.push(Pixel{r:red,g:green,b:blue});
+            //}
+        }
+        image.pixels.push(row);
+    }
+
+
+
+
+    // TODO: Parse the image here
+
+    Ok(image)
+}
+
+
 
 
 fn decode_ppm_image(cursor: &mut Cursor<Vec<u8>>) -> Result<Image, std::io::Error> {
@@ -106,8 +154,10 @@ fn decode_ppm_image(cursor: &mut Cursor<Vec<u8>>) -> Result<Image, std::io::Erro
             let red = cursor.read_u8()?;
             let green = cursor.read_u8()?;
             let blue = cursor.read_u8()?;
-            
+
             row.push(Pixel{r:red,g:green,b:blue});
+            
+
         }
         image.pixels.push(row);
     }
@@ -184,7 +234,12 @@ fn main() {
 
     // construct a cursor so we can seek in the raw buffer
     let mut cursor = Cursor::new(raw_file);
-    let image = match decode_ppm_image(&mut cursor) {
+    /* let image = match decode_ppm_image(&mut cursor) {
+        Ok(img) => img,
+        Err(why) => panic!("Could not parse PPM file - Desc: {}", why),
+    }; */
+
+    let image = match get_char(&mut cursor) {
         Ok(img) => img,
         Err(why) => panic!("Could not parse PPM file - Desc: {}", why),
     };
